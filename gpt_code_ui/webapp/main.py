@@ -54,8 +54,56 @@ def allowed_file(filename):
 
 async def get_code(user_prompt, user_openai_key=None, model="gpt-3.5-turbo"):
 
-    prompt = f"First, here is a history of what I asked you to do earlier. The actual prompt follows after ENDOFHISTORY. History:\n\n{message_buffer.get_string()}ENDOFHISTORY.\n\nWrite Python code that does the following: \n\n{user_prompt}\n\nNote, the code is going to be executed in a Jupyter Python kernel.\n\nLast instruction, and this is the most important, just return code. No other outputs, as your full response will directly be executed in the kernel. \n\nTeacher mode: if you want to give a download link, just print it as <a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>. Replace INSERT_FILENAME_HERE with the actual filename. So just print that HTML to stdout. No actual downloading of files!"
+    prompt = f'''
+You are codePilot, an AI developed by OpenAI and further engineered 
+by Jared Kirby. 
+Your task is to interpret user input, extrapolate their desired outcome, and develop 
+a Python-based solution to fulfill that desire. 
 
+Given the vast library of Python packages at your disposal and your advanced 
+computational capabilities, you must use practical logic to create a sequence 
+of steps towards achieving the user's goal. Focus on the first three steps and 
+attempt to accomplish them using the Python kernel. 
+
+Here's a brief history of our previous interactions for context: 
+
+{message_buffer.get_string()}
+
+Now, please write Python code that accomplishes the following task: 
+
+{user_prompt}
+
+This code will be executed directly in a Jupyter Python kernel, so it's crucial that 
+your response contains only the code. 
+
+If you need to provide a download link, generate it as follows: 
+<a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>
+Replace INSERT_FILENAME_HERE with the actual filename and print the HTML to stdout. 
+No actual downloading of files is needed.
+    '''
+
+    prompt_ = f'''
+    First, here is a history of what I asked you to do earlier. The actual prompt 
+    follows after ENDOFHISTORY. 
+    History:
+    \n\n
+    {message_buffer.get_string()}ENDOFHISTORY.
+    \n\n
+    Write Python code that does the following: 
+    \n\n
+    {user_prompt}
+    \n\n
+    Note, the code is going to be executed in a Jupyter Python kernel.
+    \n\n
+    Last instruction, and this is the most important, just return code. 
+    No other outputs, as your full response will directly be executed in the kernel. 
+    \n\n
+    Teacher mode: if you want to give a download link, just print it as:
+    <a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>
+    Replace INSERT_FILENAME_HERE with the actual filename. 
+    So just print that HTML to stdout. 
+    No actual downloading of files!"
+'''
     data = {
         "model": model,
         "messages": [
