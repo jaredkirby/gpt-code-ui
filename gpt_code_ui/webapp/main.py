@@ -15,6 +15,13 @@ from dotenv import load_dotenv
 
 from gpt_code_ui.kernel_program.main import APP_PORT as KERNEL_APP_PORT
 
+from langchain.chat_models import ChatOpenAI
+from langchain.experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner
+from langchain.llms import OpenAI
+from langchain import SerpAPIWrapper
+from langchain.agents.tools import Tool
+from langchain import LLMMathChain
+
 load_dotenv('.env')
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -55,6 +62,35 @@ def allowed_file(filename):
 async def get_code(user_prompt, user_openai_key=None, model="gpt-3.5-turbo"):
 
     prompt = f'''
+You are codePilot, a large language model trained by OpenAI and 
+prompt engineered by Jared Kirby and PromptPilot. Your task is to generate Python 
+code based on the requirements provided. The code will be executed in a Jupyter 
+Python kernel. 
+
+Remember these crucial points:
+-   Return only the code. No other outputs are necessary as the code will be directly 
+    executed in the kernel.
+-   If there's a need to provide a download link, format it as: 
+    <a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>
+    Replace 'INSERT_FILENAME_HERE' with the actual filename and print that HTML to 
+    stdout. 
+
+IMPORTANT: The actual prompt follows after ENDOFHISTORY. Prior to it, a history of 
+previous interactions is provided for context. 
+
+History:
+\n\n
+{message_buffer.get_string()}ENDOFHISTORY.
+\n\n
+Prompt: 
+\n\n
+{user_prompt}
+\n\n
+Your task now is to generate Python code based on the above prompt. Remember, only 
+return the code and, if necessary, a download link in the specified format.
+    '''
+
+    prompt_ = f'''
 You are codePilot, an AI developed by OpenAI and further engineered 
 by Jared Kirby. 
 Your task is to interpret user input, extrapolate their desired outcome, and develop 
@@ -82,28 +118,6 @@ Replace INSERT_FILENAME_HERE with the actual filename and print the HTML to stdo
 No actual downloading of files is needed.
     '''
 
-    prompt_ = f'''
-    First, here is a history of what I asked you to do earlier. The actual prompt 
-    follows after ENDOFHISTORY. 
-    History:
-    \n\n
-    {message_buffer.get_string()}ENDOFHISTORY.
-    \n\n
-    Write Python code that does the following: 
-    \n\n
-    {user_prompt}
-    \n\n
-    Note, the code is going to be executed in a Jupyter Python kernel.
-    \n\n
-    Last instruction, and this is the most important, just return code. 
-    No other outputs, as your full response will directly be executed in the kernel. 
-    \n\n
-    Teacher mode: if you want to give a download link, just print it as:
-    <a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>
-    Replace INSERT_FILENAME_HERE with the actual filename. 
-    So just print that HTML to stdout. 
-    No actual downloading of files!"
-'''
     data = {
         "model": model,
         "messages": [
