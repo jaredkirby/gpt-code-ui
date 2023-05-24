@@ -21,6 +21,7 @@ from langchain.llms import OpenAI
 from langchain import SerpAPIWrapper
 from langchain.agents.tools import Tool
 from langchain import LLMMathChain
+from langchain.tools import tool
 
 load_dotenv('.env')
 
@@ -59,13 +60,13 @@ def allowed_file(filename):
     return True
 
 
+@tool("CodePilot")
 async def get_code(user_prompt, user_openai_key=None, model="gpt-3.5-turbo"):
 
     prompt = f'''
-You are codePilot, a large language model trained by OpenAI and 
-prompt engineered by Jared Kirby and PromptPilot. Your task is to generate Python 
-code based on the requirements provided. The code will be executed in a Jupyter 
-Python kernel. 
+You are codePilot, a large language model trained by OpenAI and prompt engineered 
+by Jared Kirby and PromptPilot. Your task is to generate Python code based on the 
+requirements provided. The code will be executed in a Jupyter Python kernel. 
 
 Remember these crucial points:
 -   Return only the code. No other outputs are necessary as the code will be directly 
@@ -88,34 +89,6 @@ Prompt:
 \n\n
 Your task now is to generate Python code based on the above prompt. Remember, only 
 return the code and, if necessary, a download link in the specified format.
-    '''
-
-    prompt_ = f'''
-You are codePilot, an AI developed by OpenAI and further engineered 
-by Jared Kirby. 
-Your task is to interpret user input, extrapolate their desired outcome, and develop 
-a Python-based solution to fulfill that desire. 
-
-Given the vast library of Python packages at your disposal and your advanced 
-computational capabilities, you must use practical logic to create a sequence 
-of steps towards achieving the user's goal. Focus on the first three steps and 
-attempt to accomplish them using the Python kernel. 
-
-Here's a brief history of our previous interactions for context: 
-
-{message_buffer.get_string()}
-
-Now, please write Python code that accomplishes the following task: 
-
-{user_prompt}
-
-This code will be executed directly in a Jupyter Python kernel, so it's crucial that 
-your response contains only the code. 
-
-If you need to provide a download link, generate it as follows: 
-<a href='/download?file=INSERT_FILENAME_HERE'>Download file</a>
-Replace INSERT_FILENAME_HERE with the actual filename and print the HTML to stdout. 
-No actual downloading of files is needed.
     '''
 
     data = {
@@ -161,6 +134,21 @@ No actual downloading of files is needed.
         return "Error: " + response.text, 500
 
     return extract_code(response.json()["choices"][0]["message"]["content"]), 200
+
+
+llm = OpenAI(temperature=0)
+tools = [
+    Tool(
+        name="CodePilot",
+        func=get_code.run,
+        description="Useful for when you need to generate and execute code. Requests should be made in natrual language the form of a list of requirements."
+    )
+]
+
+model = ChatOpenAI(temperature=0)
+planner = load_chat_planner(model)
+executor = load_agent_executor(model, tools, verbose=True)
+agent - PlanAndExecute(planner=planner, executor=executor, verbose=True)
 
 # We know this Flask app is for local use. So we can disable the verbose Werkzeug logger
 log = logging.getLogger('werkzeug')
